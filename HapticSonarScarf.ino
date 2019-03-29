@@ -15,34 +15,34 @@
 
 #include <Ultrasonic.h>
 
-Ultrasonic ultrasonicLeft(2,3);	// An ultrasonic sensor HC-04
-Ultrasonic ultrasonicRight(4,5);
+Ultrasonic ultrasonicLeft(2,3);	// trig 2, echo 3
+Ultrasonic ultrasonicRight(4,5); // trig 4, echo 5
 
 // variable to hold the pin values
-const int leftVibe = 12;
-const int rightVibe = 11;
+const int leftVibe = 12; //left is pin 12
+const int rightVibe = 11; //right is pin 11
 
 //variable to hold the reading from the sonar sensors
-int leftResponse;
-int rightResponse;
+float leftResponse;
+float rightResponse;
 
-//variable to hold the rate of pulsing
-int pulseL;
-int pulseR;
+//variable to hold the rate of pulsing in ms
+float pulseL;
+float pulseR;
 
 //variable for the functioning of the timer
 unsigned long leftRead = 0;
 unsigned long rightRead = 0;
-unsigned long leftVibeTime = 0;
-unsigned long rightVibeTime = 0;
 //length to hold the vibe
-const long vibeLength = 1000;
+const int vibeLength = 200;
 //strength of the vibe (out of 255)
-int vibeStrength = 200;
+int vibeStrength = 100;
 
-//if the sensor returns nothing, do nothing
+//if the sensor returns nothing, do nothing 
 bool noLeftData;
 bool noRightData;
+bool leftOn;
+bool rightOn;
 
 void setup() {
   Serial.begin(9600);
@@ -55,86 +55,63 @@ void loop() {
   //pass the readings from the sensors into the variables and set the maximum range
   calibrate();
 
-  //pass the rate of pulses into each vibe
-//  if(noLeftData == false){
-//    pulse(pulseL, leftVibe);
-  if(millis() - leftRead >= pulseL) {
-//    vibe(whichPin);
-      digitalWrite(leftVibe, HIGH);
-        if(millis() - leftVibeTime >= vibeLength){
-        digitalWrite(leftVibe, LOW);
-        leftVibeTime = millis();
-        }
-//        Serial.println("LEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFT");
-        leftRead = millis();
-    }
-  if(millis() - rightRead >= pulseR) {
-//    vibe(whichPin);
-      digitalWrite(rightVibe, HIGH);
-        if(millis() - rightVibeTime >= vibeLength){
-        digitalWrite(rightVibe, LOW);
-        rightVibeTime = millis();
-        }
-//        Serial.println("RIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIGGGHT");
-        rightRead = millis();
-    }
-
- // } else {
-//    Serial.print("No Left Data");
-//  }
-//  if(noRightData == false){
-//    pulse(pulseR, rightVibe);
-//  } else {
-//    Serial.print("No Right Data");
+  //Left sensor controller 
+   if(!leftOn && !noLeftData && millis() - leftRead >= pulseL){
+          Serial.print("LEFT ON");
+          leftOn = true;
+          analogWrite(leftVibe, vibeStrength);
+          leftRead = millis();
+             } else if (leftOn && millis() - leftRead >= vibeLength){
+              leftOn = false;
+              digitalWrite(leftVibe, LOW);
+              leftRead = millis();
+             }
+//          leftVibeTime = millis();
 
 
-  
+  //Right sensor controller 
+    if(!rightOn && !noRightData && millis() - rightRead >= pulseR) {
+          Serial.print("RIGHT ON");
+          rightOn = true;
+          analogWrite(rightVibe, vibeStrength);
+          rightRead = millis();
+            } else if(rightOn && millis() - rightRead >= vibeLength){
+              rightOn = false;
+              digitalWrite(rightVibe, LOW);
+              rightRead = millis();
+            } 
+ //         rightVibeTime = millis();
+     
+ 
   Serial.print(pulseL);
   Serial.print(" ");
   Serial.print(pulseR);
-  delay(10);
+  delay(500);
 //  
   Serial.println();
 }
-
-//void pulse(int rate, int whichPin){
-//  
-//  if(millis() - lastRead >= rate) {
-////    vibe(whichPin);
-//      digitalWrite(whichPin, HIGH);
-//        if(millis() - vibeTime >= vibeLength){
-//        digitalWrite(whichPin, LOW);
-//        vibeTime = millis();
-//        }
-//      Serial.print(whichPin);
-//      Serial.print("*********************************************************************/");
-//      lastRead = millis();
-//    }
-//}
 
 void calibrate(){
  
   leftResponse = ultrasonicLeft.read(INC);
   rightResponse = ultrasonicRight.read(INC);
 
-  if(leftResponse >=61){
+  //***********************Cap the range at 8 feet (96 inches)
+  if(leftResponse >=121){
+    noLeftData = true;
+  } else if(leftResponse <=10){
     noLeftData = true;
   } else {
     noLeftData = false;
   }
-  if(rightResponse >= 61){
+  if(rightResponse >= 121){
     noRightData= true;
+  } else if(rightResponse <=4){
+    noRightData = true;
   } else {
-    noRightData= false;
+    noRightData = false;
   }
   //set the rate of pulsing - 60 inches max to 1 inch min, 6000ms max to 100ms min
-  pulseL = map(leftResponse, 60, 1, 6000, 100);
-  pulseR = map(rightResponse, 60, 1, 6000, 100);
-}
-
-//void vibe(int whichPin){
-//  analogWrite(whichPin, vibeStrength);
-//  if(millis() - lastRead >= vibeLength){
-//    analogWrite(whichPin, LOW);
-//  }
-//}
+  pulseL = map(leftResponse, 1, 140, 200, 2000);
+  pulseR = map(rightResponse, 1, 140, 200, 2000);
+} 
